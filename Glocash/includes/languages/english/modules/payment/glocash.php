@@ -19,11 +19,13 @@
   define('MODULE_PAYMENT_GLOCASH_ENTRY_STATE', 'Notification:');
   define('MODULE_PAYMENT_GLOCASH_ENTRY_MODATE', 'Date:');
 
-  define('MODULE_PAYMENT_GLOCASH_MARK_BUTTON_IMG', DIR_WS_MODULES . '/payment/glocash/logo.png');
+  define('MODULE_PAYMENT_GLOCASH_MARK_BUTTON_IMG', DIR_WS_MODULES . 'payment/glocash/logo.png');
   define('MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT', 'Checkout with Glocash');
   define('MODULE_PAYMENT_GLOCASH_ACCEPTANCE_MARK_TEXT', 'GLOCASH Online Payment');
 
-  define('MODULE_PAYMENT_GLOCASH_TEXT_CATALOG_LOGO', '<span class="smallText">' . MODULE_PAYMENT_GLOCASH_ACCEPTANCE_MARK_TEXT . '</span><br/>' . '<img src="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_IMG . '" width=200 alt="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" title="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" /> &nbsp;');
+  //define('MODULE_PAYMENT_GLOCASH_TEXT_CATALOG_LOGO', '<span class="smallText">' . MODULE_PAYMENT_GLOCASH_ACCEPTANCE_MARK_TEXT . '</span><br/>' . '<img src="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_IMG . '" width=200 alt="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" title="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" /> &nbsp;');
+  
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CATALOG_LOGO', '<div style="display: inline-block;margin-left: 0px;vertical-align: middle;"><span class="smallText" style="vertical-align: text-bottom;line-height: 40px;">' . MODULE_PAYMENT_GLOCASH_ACCEPTANCE_MARK_TEXT . '</span>' . '<img style="margin-left:40px;" src="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_IMG . '" width=130 alt="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" title="' . MODULE_PAYMENT_GLOCASH_MARK_BUTTON_ALT . '" /></div> &nbsp;');
 
 
   define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_1_1', 'Enable GLOCASH Module');  
@@ -32,6 +34,12 @@
   define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_2_2', 'GLOCASH E-Mail');  
   define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_3_1', 'GLOCASH Secret key');  
   define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_3_2', 'GLOCASH Secret key');  
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_10_1', 'GLOCASH Method'); 
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_10_2', 'GLOCASH Method'); 
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_11_1', '3DS'); 
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_11_2', '3D－Secure'); 
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_12_1', 'Terminal'); 
+  define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_12_2', 'Terminal'); 
   
   
   define('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_4_1', 'Payment Zone');

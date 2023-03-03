@@ -46,12 +46,6 @@ class glocash
             $this->update_status();
         }
             
-        if (strtolower(MODULE_PAYMENT_GLOCASH_HANDLER) != 'sandbox') {
-            $this->form_action_url = 'https://pay.glocash.com/';
-        } else {
-            $this->form_action_url = 'https://sandbox.glocash.com/';
-        }
-        $this->form_action_url .= "gateway/payment/index";
         
     }
     
@@ -120,6 +114,7 @@ class glocash
                 $db->Execute('delete from ' . TABLE_ORDERS_PRODUCTS_ATTRIBUTES . ' where orders_id = "' . (int)$order_id . '"');
                 $db->Execute('delete from ' . TABLE_ORDERS_PRODUCTS_DOWNLOAD . ' where orders_id = "' . (int)$order_id . '"');
                 
+				$this->gcDbLog($order_id,"deleted");
                 $this->gcLog(__FUNCTION__." order id:$order_id deleted.");
             }
             $order = new order();
@@ -134,6 +129,7 @@ class glocash
             $_SESSION['old_cur'] = $_SESSION['currency']; //if the customer swich the currency
         } // generate order block end, to be compatible with previous version,we do dump data to widelypay talbe(but not manditory)
         
+		$this->gcDbLog($order_id,"payment");
         $ret = $this->getGCPaymentUrl($order, (int)$order_id);
         if($ret['return']){
             $redirectUrl = $ret['msg'];
@@ -161,8 +157,16 @@ class glocash
     function before_process ()
     {
         global $db, $order_total_modules, $messageStack;
+		
+		$r=array(
+			"post"=>$_POST,
+			"get"=>$_GET,
+		);
+		
+		$this->gcDbLog(0,"result: ".json_encode($r));
         $this->gcLog(__FUNCTION__." POST:".json_encode($_POST));
         
+		/*
         $valid = false;
         // {"REQ_INVOICE":"ZC30","CUS_EMAIL":"xxx@qq.com","BIL_METHOD":"C01","TNS_UTIMES":"1547624556.9252","TNS_GCID":"C01AL129NYZLNZB4","PGW_PRICE":"13.09","PGW_CURRENCY":"EUR","FDL_DECISION":"ACP","BIL_STATUS":"paid","REQ_TIMES":"1547624575","REQ_SIGN":"d3fd25eb44580b35ead2052a50dfc1bf22e7e3a7bc1cdca1742736dde979facc"}
         $param = $_POST;
@@ -186,8 +190,9 @@ class glocash
             $orderId = str_replace("ZC", "", $orderId);
         }
         
-        $payStatus = $param['BIL_STATUS'];
-        $this->gcLog(__FUNCTION__." glocash-info-ids-".$orderId.'--'.$payStatus);
+        */
+		
+		$payStatus = empty($param['BIL_STATUS'])?"pending":$param['BIL_STATUS'];
         switch ($payStatus) {
             case "failed":
                 $messageStack->add_session('checkout_payment', 'Unfortunately, the confirmation of your payment failed. Please contact your merchant for clarification.', 'error');
@@ -205,8 +210,8 @@ class glocash
                 zen_redirect(zen_href_link(FILENAME_CHECKOUT_PAYMENT, '', 'NONSSL', true, false));
                 break;
         }
-        
-        
+		
+		
         $this->after_process();
         zen_redirect(zen_href_link(FILENAME_CHECKOUT_SUCCESS));
         return true;
@@ -244,6 +249,11 @@ class glocash
         if (! defined('MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_1_1'))
             include (DIR_FS_CATALOG_LANGUAGES . $_SESSION['language'] .
                      '/modules/' . $module_type . '/' . $this->code . '.php');
+		
+		$last_configuration_group_id = $db->Execute("SELECT configuration_group_id FROM " . TABLE_CONFIGURATION ." group by configuration_group_id order by configuration_group_id desc limit 1");
+		$last_configuration_group_id = $last_configuration_group_id->fields['configuration_group_id'];
+		$last_configuration_group_id = $last_configuration_group_id+1;
+		
         
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
@@ -251,28 +261,53 @@ class glocash
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_1_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_STATUS', 'False', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_1_2 .
-                         "', '9', '1', 'zen_cfg_select_option(array(\'True\', \'False\'), ', now())");
+                         "', '".$last_configuration_group_id."', '1', 'zen_cfg_select_option(array(\'True\', \'False\'), ', now())");
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
                          " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_2_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_SELLER_EMAIL', '', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_2_2 .
-                         "', '9', '2', now())");
+                         "', '".$last_configuration_group_id."', '2', now())");
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
                          " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_3_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_SECRET_KEY', '', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_3_2 .
-                         "', '9', '3', now())");
+                         "', '".$last_configuration_group_id."', '3', now())");
+		
+		$db->Execute(
+                "insert into " . TABLE_CONFIGURATION .
+                         " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, date_added) values ('" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_10_1 .
+                         "', 'MODULE_PAYMENT_GLOCASH_METHOD', '', '" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_10_2 .
+                         "', '".$last_configuration_group_id."', '4', now())");
+						 
+		$db->Execute(
+                "insert into " . TABLE_CONFIGURATION .
+                         " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_11_1 .
+                         "', 'MODULE_PAYMENT_GLOCASH_3DS', 'On', '" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_11_2 .
+                         "', '".$last_configuration_group_id."', '5', 'zen_cfg_select_option(array(\'On\', \'Off\'), ', now())");
+						 
+		$db->Execute(
+                "insert into " . TABLE_CONFIGURATION .
+                         " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_12_1 .
+                         "', 'MODULE_PAYMENT_GLOCASH_TERMINAL', 'glocashpayment', '" .
+                         MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_12_2 .
+                         "', '".$last_configuration_group_id."', '6', 'zen_cfg_select_option(array(\'glocashpayment\', \'glocash\'), ', now())");
+		
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
                          " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, use_function, set_function, date_added) values ('" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_4_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_ZONE', '0', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_4_2 .
-                         "', '9', '4', 'zen_get_zone_class_title', 'zen_cfg_pull_down_zone_classes(', now())");
+                         "', '".$last_configuration_group_id."', '7', 'zen_get_zone_class_title', 'zen_cfg_pull_down_zone_classes(', now())");
         
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
@@ -280,7 +315,7 @@ class glocash
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_5_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_ORDER_STATUS_ID', '1', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_5_2 .
-                         "', '9', '5', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
+                         "', '".$last_configuration_group_id."', '8', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
         
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
@@ -288,15 +323,15 @@ class glocash
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_6_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_PROCESSING_STATUS_ID', '2', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_6_2 .
-                         "', '9', '6', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
+                         "', '".$last_configuration_group_id."', '9', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
         
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
                          " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, use_function, date_added) values ('" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_7_1 .
-                         "', 'MODULE_PAYMENT_GLOCASH_ORDER_STATUS_PAY_FAIL_ID', '2', '" .
+                         "', 'MODULE_PAYMENT_GLOCASH_ORDER_STATUS_PAY_FAIL_ID', '3', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_7_2 .
-                         "', '9', '7', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
+                         "', '".$last_configuration_group_id."', '10', 'zen_cfg_pull_down_order_statuses(', 'zen_get_order_status_name', now())");
         
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
@@ -304,14 +339,14 @@ class glocash
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_8_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_SORT_ORDER', '0', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_8_2 .
-                         "', '9', '8', now())");
+                         "', '".$last_configuration_group_id."', '11', now())");
         $db->Execute(
                 "insert into " . TABLE_CONFIGURATION .
                          " (configuration_title, configuration_key, configuration_value, configuration_description, configuration_group_id, sort_order, set_function, date_added) values ('" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_9_1 .
                          "', 'MODULE_PAYMENT_GLOCASH_HANDLER', 'Live', '" .
                          MODULE_PAYMENT_GLOCASH_TEXT_CONFIG_9_2 .
-                         "', '9', '9', 'zen_cfg_select_option(array(\'Live\', \'Sandbox\'), ', now())");
+                         "', '".$last_configuration_group_id."', '12', 'zen_cfg_select_option(array(\'Live\', \'Sandbox\'), ', now())");
         
         $this->createTable();
     }
@@ -331,6 +366,9 @@ class glocash
                 'MODULE_PAYMENT_GLOCASH_STATUS',
                 'MODULE_PAYMENT_GLOCASH_SELLER_EMAIL',
                 'MODULE_PAYMENT_GLOCASH_SECRET_KEY',
+				'MODULE_PAYMENT_GLOCASH_METHOD',
+				'MODULE_PAYMENT_GLOCASH_3DS',
+				'MODULE_PAYMENT_GLOCASH_TERMINAL',
                 'MODULE_PAYMENT_GLOCASH_ZONE',
                 'MODULE_PAYMENT_GLOCASH_PROCESSING_STATUS_ID',
                 'MODULE_PAYMENT_GLOCASH_ORDER_STATUS_PAY_FAIL_ID',
@@ -380,7 +418,7 @@ class glocash
                 $param['PGW_PRICE'].
                 $param['PGW_CURRENCY']
         );
-    
+		
         $this->gcLog(__FUNCTION__." sign:".$sign);
     
         return $sign==$param['REQ_SIGN'];
@@ -406,10 +444,14 @@ class glocash
     
         //货币转大写
         $currency = strtoupper($currency);
-        $BIL_METHOD = 'C01';
+        $BIL_METHOD = MODULE_PAYMENT_GLOCASH_METHOD;
     
         $returnUrl = zen_href_link(FILENAME_CHECKOUT_PROCESS);
         $notifyUrl = zen_href_link('glocash_notify.php','', 'NONSSL',false,false,true);
+		
+		$bil3ds=0;
+		if(strtolower(MODULE_PAYMENT_GLOCASH_3DS)=='on')
+			$bil3ds=1;
         
         //这里生成url需要的各种参数呗
         $param= array(
@@ -420,6 +462,7 @@ class glocash
                 'BIL_PRICE'=>$grandTotal,
                 'BIL_CURRENCY'=>$currency,
                 'BIL_METHOD'=>$BIL_METHOD,
+				'BIL_CC3DS'=>$bil3ds,
     
                 'URL_SUCCESS'=>$returnUrl,
                 'URL_PENDING'=>$returnUrl,
@@ -438,10 +481,23 @@ class glocash
                 $param['BIL_PRICE'].
                 $param['BIL_CURRENCY']
         );
+		
+		$this->gcDbLog($orderId,"param: ".json_encode($param));
+		
+		if (strtolower(MODULE_PAYMENT_GLOCASH_HANDLER) != 'sandbox') {
+            $this->form_action_url = 'https://pay.'.MODULE_PAYMENT_GLOCASH_TERMINAL.'.com/';
+        } else {
+            $this->form_action_url = 'https://sandbox.'.MODULE_PAYMENT_GLOCASH_TERMINAL.'.com/';
+        }
+        $this->form_action_url .= "gateway/payment/index";
+
     
         
         $this->gcLog(__FUNCTION__.":".json_encode($param));
         $httpCode = self::paycurl($this->form_action_url, http_build_query($param), $result);
+		
+		$this->gcDbLog($orderId,"url: ".$this->form_action_url." response: ".$result);
+		
         $data = json_decode($result, true);
         $this->gcLog(__FUNCTION__." paycurl:".json_encode($data));
         if ($httpCode!=200 || empty($data['URL_PAYMENT'])) {
@@ -453,8 +509,10 @@ class glocash
         //交易号
         $transaction_id = $data['TNS_GCID'];
         //保存流水信息,状态为提交申请,这个类型的,列表就不用显示了吧,属于垃圾信息
-    
+	
         $msg['msg'] = $data['URL_PAYMENT'];
+		//$msg['msg']=str_replace("https","http",$data['URL_PAYMENT']);
+		
         $msg['return'] = true;
         return $msg;
     }
